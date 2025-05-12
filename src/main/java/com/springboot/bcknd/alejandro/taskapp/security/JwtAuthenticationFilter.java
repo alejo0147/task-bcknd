@@ -15,9 +15,9 @@ import java.io.IOException;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    // Simula la validación del token
     private boolean validateToken(String token) {
-        return token.equals("VALIDO-TOKEN");
+        // Validamos cualquier token que empiece con "VALIDO-"
+        return token.startsWith("VALIDO-");
     }
 
     @Override
@@ -25,8 +25,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        // Excluye endpoints públicos del filtro JWT
-        if (request.getServletPath().startsWith("/api/auth")) {
+        // Permitir acceso sin autenticación a rutas públicas
+        if (request.getServletPath().equals("/")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -34,21 +34,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
-            response.getWriter().write("{\"error\": \"Token no proporcionado o mal formado\"}");
+            response.getWriter().write("{\"error\": \"Token no proporcionado\"}");
             return;
         }
 
         String jwt = authHeader.substring(7);
 
         if (!validateToken(jwt)) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
-            response.getWriter().write("{\"error\": \"Token inválido o expirado\"}");
+            response.getWriter().write("{\"error\": \"Token inválido\"}");
             return;
         }
 
+        // Autenticación exitosa
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken("user", null, null);
         authentication.setDetails(
@@ -58,5 +59,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
-
 }
